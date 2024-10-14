@@ -1,11 +1,12 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 
 namespace Slingshot
 {
     public class SlingShot : MonoBehaviour
     {
         private const float BorderOffsetYMin = -1f;
-        private const float Radius = 0.8f;
+        private const float Radius = 1f;
 
         [SerializeField] private Transform _centerLineTransform;
         [SerializeField] private Transform _leftLineTransform;
@@ -25,6 +26,11 @@ namespace Slingshot
         private Game _game;
         
         private Transform TargetTransform => _targetSpriteRenderer.transform.parent.transform;
+
+        private void Awake()
+        {
+            ToggleShootElements(false);
+        }
 
         public void Construct(Game game)
         {
@@ -51,11 +57,6 @@ namespace Slingshot
 
             _centerLineTransform.transform.position = TargetTransform.position;
         }
-
-        private void Awake()
-        {
-            ToggleActive(false);
-        }
         
         private void DrawLine()
         {
@@ -68,10 +69,13 @@ namespace Slingshot
             var lookAngle = Mathf.Atan2(lookDirection.y, lookDirection.x) * Mathf.Rad2Deg;
             
             _centerLineTransform.transform.rotation = Quaternion.Euler(0f, 0f, lookAngle - 90);
-            _centerLineTransform.gameObject.SetActive(true);
             
-            _leftLineTransform.transform.rotation = Quaternion.Euler(0f, 0f, lookAngle - 90 - 10);
-            _rightLineTransform.transform.rotation = Quaternion.Euler(0f, 0f, lookAngle - 90 + 10);
+            var centerCircle = new Vector3(_initPosition.x, _initPosition.y, _initPosition.z);
+            var d = (centerCircle - TargetTransform.position).sqrMagnitude;
+            
+            
+            _leftLineTransform.transform.rotation = Quaternion.Euler(0f, 0f, lookAngle - 90 - (10 * d));
+            _rightLineTransform.transform.rotation = Quaternion.Euler(0f, 0f, lookAngle - 90 + (10 * d));
         }
         
         private Vector3 GetDirection()
@@ -146,6 +150,8 @@ namespace Slingshot
             _isBeginTouch = true;
 
             _offset = _initPosition - _touchBegin;
+            
+            ToggleShootElements(true);
         }
 
         private void OnMove()
@@ -154,7 +160,7 @@ namespace Slingshot
             var screenPoint = new Vector3(position.x, position.y, _game.GameContext.Camera.nearClipPlane);
             var currentPosition = _game.GameContext.Camera.ScreenToWorldPoint(screenPoint) + _offset;
             
-            var centerCircle = new Vector3(_initPosition.x, _initPosition.y -0.36f, _initPosition.z);
+            var centerCircle = new Vector3(_initPosition.x, _initPosition.y, _initPosition.z);
             var direction = currentPosition - centerCircle;
 
             var coordinates = new Vector2(currentPosition.x, currentPosition.y);
@@ -182,6 +188,15 @@ namespace Slingshot
         {
             _centerLineTransform.gameObject.SetActive(false);
             TargetTransform.position = _initPosition;
+
+            ToggleShootElements(false);
+        }
+
+        private void ToggleShootElements(bool isShow)
+        {
+            _centerLineTransform.gameObject.SetActive(isShow);
+            _leftLineTransform.gameObject.SetActive(isShow);
+            _rightLineTransform.gameObject.SetActive(isShow);
         }
 
         private bool IsTouchTargetObject(Vector3 position)
